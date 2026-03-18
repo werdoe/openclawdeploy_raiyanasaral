@@ -136,20 +136,30 @@ log "OpenClaw ${INSTALLED_VER}"
 # =============================================================================
 step "OpenClaw Setup"
 
-echo ""
-echo -e "  ${BOLD}The wizard will ask you a few things:${NC}"
-echo ""
-echo "    API provider  ->  Anthropic (recommended)"
-echo "    Default model  ->  claude-sonnet-4-20250514"
-echo "    Gateway mode   ->  local"
-echo "    Channel        ->  Telegram (for mobile access)"
-echo ""
-echo "  You'll need your Anthropic API key ready."
-echo "  Get one at: https://console.anthropic.com/settings/keys"
-echo ""
-read -p "  Press Enter to start the wizard..."
-
-openclaw onboard
+# Detect if we have a real terminal (piped scripts don't)
+if [ -t 0 ]; then
+    echo ""
+    echo -e "  ${BOLD}The wizard will ask you a few things:${NC}"
+    echo ""
+    echo "    API provider  ->  Anthropic (recommended)"
+    echo "    Default model  ->  claude-sonnet-4-20250514"
+    echo "    Gateway mode   ->  local"
+    echo "    Channel        ->  Telegram (for mobile access)"
+    echo ""
+    echo "  You'll need your Anthropic API key ready."
+    echo "  Get one at: https://console.anthropic.com/settings/keys"
+    echo ""
+    read -p "  Press Enter to start the wizard..."
+    openclaw onboard
+else
+    warn "No interactive terminal detected (running via curl pipe)."
+    echo ""
+    echo "  Run onboarding manually after this script finishes:"
+    echo ""
+    echo "    openclaw onboard"
+    echo ""
+    SKIP_ONBOARD=true
+fi
 
 # =============================================================================
 # 4. Security hardening
@@ -158,6 +168,10 @@ step "Security hardening"
 
 CONFIG_DIR="$HOME/.openclaw"
 CONFIG_FILE="$CONFIG_DIR/openclaw.json"
+
+if [ "$SKIP_ONBOARD" = true ] && [ ! -f "$CONFIG_FILE" ]; then
+    warn "Skipping hardening -- run 'openclaw onboard' first, then re-run this script."
+fi
 
 if [ -f "$CONFIG_FILE" ]; then
     node -e "
