@@ -5,7 +5,7 @@ One-command setup for a production-ready [OpenClaw](https://docs.openclaw.ai) in
 ## Quick Start
 
 ```bash
-curl -sL https://raw.githubusercontent.com/werdoe/openclaw-deploy/main/deploy.sh | bash
+curl -sLO https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.sh && bash deploy.sh
 ```
 
 Or clone and run:

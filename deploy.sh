@@ -1,28 +1,16 @@
 #!/bin/bash
 # =============================================================================
 # OpenClaw Quick Deploy
-# 
-# One command to install and configure a production-ready OpenClaw instance.
 #
 # Usage:
-#   curl -sL https://raw.githubusercontent.com/werdoe/openclaw-deploy/main/deploy.sh | bash
+#   curl -sLO https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.sh && bash deploy.sh
 #
-# What it does:
-#   1. Checks/installs Node.js 20+ (via nvm if needed)
-#   2. Installs OpenClaw globally
-#   3. Runs onboarding wizard (API key, model, channel setup)
-#   4. Hardens security (loopback binding, token auth)
-#   5. Creates workspace directory structure
-#   6. Registers gateway as background service
-#   7. Verifies everything works
-#
-# Works on: macOS, Linux (Ubuntu/Debian), WSL
+# Works on: macOS, Linux (Ubuntu/Debian)
 # Time: ~5 minutes
 # =============================================================================
 
 set -e
 
-# -- Colors -------------------------------------------------------------------
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -36,14 +24,11 @@ error() { echo -e "${RED}[ERR]${NC} $1"; exit 1; }
 info()  { echo -e "${BLUE}[..]${NC} $1"; }
 step()  { echo -e "\n${BOLD}${BLUE}--- $1 ---${NC}\n"; }
 
-# -- Configuration (edit if needed) -------------------------------------------
-OPENCLAW_VERSION="latest"
 GATEWAY_PORT=18789
 GATEWAY_BIND="loopback"
-MIN_NODE_VERSION=20
 
 # =============================================================================
-# 1. Pre-flight
+# 1. OS + Xcode
 # =============================================================================
 step "Pre-flight checks"
 
@@ -51,19 +36,19 @@ OS="$(uname -s)"
 case "$OS" in
     Darwin) PLATFORM="macos"; log "macOS detected" ;;
     Linux)  PLATFORM="linux"; log "Linux detected" ;;
-    *)      error "Unsupported OS: $OS. This script supports macOS and Linux." ;;
+    *)      error "Unsupported OS: $OS" ;;
 esac
 
-# macOS: ensure Xcode Command Line Tools are installed (git, curl, etc.)
+if [ "$(id -u)" -eq 0 ]; then
+    error "Don't run as root. Use your normal user account."
+fi
+
 if [ "$PLATFORM" = "macos" ]; then
     if ! xcode-select -p &> /dev/null; then
-        info "Installing Xcode Command Line Tools (required for git, curl, etc.)..."
-        xcode-select --install
+        info "Installing Xcode Command Line Tools..."
+        xcode-select --install 2>/dev/null || true
         echo ""
-        echo "  Waiting for Xcode CLI tools to finish installing..."
-        echo "  If a dialog appeared, click Install and wait."
-        echo ""
-        # Wait for installation to complete
+        echo "  Waiting for installation to complete..."
         until xcode-select -p &> /dev/null; do
             sleep 5
         done
@@ -73,49 +58,70 @@ if [ "$PLATFORM" = "macos" ]; then
     fi
 fi
 
-if [ "$(id -u)" -eq 0 ]; then
-    error "Don't run as root. Use your normal user account."
-fi
+# =============================================================================
+# 2. Node.js (no nvm -- direct install)
+# =============================================================================
+step "Checking Node.js"
 
-# -- Node.js ------------------------------------------------------------------
 NEED_NODE=false
 
 if command -v node &> /dev/null; then
     NODE_VER=$(node -v | sed 's/v//' | cut -d. -f1)
-    if [ "$NODE_VER" -ge "$MIN_NODE_VERSION" ]; then
+    if [ "$NODE_VER" -ge 20 ]; then
         log "Node.js $(node -v)"
     else
-        warn "Node.js $(node -v) too old (need v${MIN_NODE_VERSION}+)"
+        warn "Node.js $(node -v) too old (need v20+)"
         NEED_NODE=true
     fi
 else
-    warn "Node.js not found"
     NEED_NODE=true
 fi
 
 if [ "$NEED_NODE" = true ]; then
     step "Installing Node.js"
     
-    if ! command -v nvm &> /dev/null; then
-        info "Installing nvm..."
-        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    if [ "$PLATFORM" = "macos" ]; then
+        # Use Homebrew if available, otherwise install it
+        if ! command -v brew &> /dev/null; then
+            info "Installing Homebrew..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            
+            # Add brew to PATH for Apple Silicon and Intel
+            if [ -f "/opt/homebrew/bin/brew" ]; then
+                eval "$(/opt/homebrew/bin/brew shellenv)"
+                echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
+            elif [ -f "/usr/local/bin/brew" ]; then
+                eval "$(/usr/local/bin/brew shellenv)"
+            fi
+            log "Homebrew installed"
+        else
+            log "Homebrew found"
+        fi
+        
+        info "Installing Node.js via Homebrew..."
+        brew install node
+        log "Node.js $(node -v) installed"
+        
+    elif [ "$PLATFORM" = "linux" ]; then
+        info "Installing Node.js 22.x..."
+        curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+        log "Node.js $(node -v) installed"
     fi
-    
-    nvm install --lts
-    nvm use --lts
-    log "Node.js $(node -v) installed"
+fi
+
+if ! command -v node &> /dev/null; then
+    error "Node.js installation failed. Install manually: https://nodejs.org"
 fi
 
 if ! command -v npm &> /dev/null; then
-    error "npm not found after Node.js installation. Something went wrong."
+    error "npm not found. Something went wrong with Node.js installation."
 fi
 
 log "npm $(npm -v)"
 
 # =============================================================================
-# 2. Install OpenClaw
+# 3. Install OpenClaw
 # =============================================================================
 step "Installing OpenClaw"
 
@@ -124,54 +130,43 @@ if command -v openclaw &> /dev/null; then
     info "OpenClaw ${CURRENT} found. Updating..."
     npm update -g openclaw
 else
-    info "Installing openclaw@${OPENCLAW_VERSION}..."
-    npm install -g "openclaw@${OPENCLAW_VERSION}"
+    info "Installing OpenClaw..."
+    npm install -g openclaw
 fi
 
-INSTALLED_VER=$(openclaw --version 2>/dev/null || echo "installed")
-log "OpenClaw ${INSTALLED_VER}"
+if ! command -v openclaw &> /dev/null; then
+    error "OpenClaw not found after install. Check npm global path."
+fi
+
+log "OpenClaw $(openclaw --version 2>/dev/null || echo 'installed')"
 
 # =============================================================================
-# 3. Onboarding
+# 4. Onboarding wizard
 # =============================================================================
 step "OpenClaw Setup"
 
-# Detect if we have a real terminal (piped scripts don't)
-if [ -t 0 ]; then
-    echo ""
-    echo -e "  ${BOLD}The wizard will ask you a few things:${NC}"
-    echo ""
-    echo "    API provider  ->  Anthropic (recommended)"
-    echo "    Default model  ->  claude-sonnet-4-20250514"
-    echo "    Gateway mode   ->  local"
-    echo "    Channel        ->  Telegram (for mobile access)"
-    echo ""
-    echo "  You'll need your Anthropic API key ready."
-    echo "  Get one at: https://console.anthropic.com/settings/keys"
-    echo ""
-    read -p "  Press Enter to start the wizard..."
-    openclaw onboard
-else
-    warn "No interactive terminal detected (running via curl pipe)."
-    echo ""
-    echo "  Run onboarding manually after this script finishes:"
-    echo ""
-    echo "    openclaw onboard"
-    echo ""
-    SKIP_ONBOARD=true
-fi
+echo ""
+echo -e "  ${BOLD}The wizard will ask you a few things:${NC}"
+echo ""
+echo "    API provider  ->  Anthropic (recommended)"
+echo "    Default model  ->  claude-sonnet-4-20250514"
+echo "    Gateway mode   ->  local"
+echo "    Channel        ->  Telegram (for mobile access)"
+echo ""
+echo "  You'll need your Anthropic API key ready."
+echo "  Get one at: https://console.anthropic.com/settings/keys"
+echo ""
+read -p "  Press Enter to start the wizard..."
+
+openclaw onboard
 
 # =============================================================================
-# 4. Security hardening
+# 5. Security hardening
 # =============================================================================
 step "Security hardening"
 
 CONFIG_DIR="$HOME/.openclaw"
 CONFIG_FILE="$CONFIG_DIR/openclaw.json"
-
-if [ "$SKIP_ONBOARD" = true ] && [ ! -f "$CONFIG_FILE" ]; then
-    warn "Skipping hardening -- run 'openclaw onboard' first, then re-run this script."
-fi
 
 if [ -f "$CONFIG_FILE" ]; then
     node -e "
@@ -179,12 +174,10 @@ if [ -f "$CONFIG_FILE" ]; then
         const crypto = require('crypto');
         const cfg = JSON.parse(fs.readFileSync('$CONFIG_FILE', 'utf8'));
         
-        // Force loopback binding
         cfg.gateway = cfg.gateway || {};
         cfg.gateway.bind = '${GATEWAY_BIND}';
         cfg.gateway.port = ${GATEWAY_PORT};
         
-        // Ensure token auth exists
         if (!cfg.gateway.auth || !cfg.gateway.auth.token) {
             cfg.gateway.auth = {
                 mode: 'token',
@@ -192,46 +185,37 @@ if [ -f "$CONFIG_FILE" ]; then
             };
         }
         
-        // Disable tailscale by default
         cfg.gateway.tailscale = cfg.gateway.tailscale || {};
         cfg.gateway.tailscale.mode = 'off';
         
         fs.writeFileSync('$CONFIG_FILE', JSON.stringify(cfg, null, 2));
     "
     log "Gateway: loopback-only, token auth, tailscale off"
-else
-    warn "Config not found at $CONFIG_FILE -- run 'openclaw onboard' manually"
 fi
 
-# macOS: enable firewall reminder
 if [ "$PLATFORM" = "macos" ]; then
-    echo ""
-    info "macOS firewall reminder:"
-    echo "  System Settings > Network > Firewall > Turn On"
-    echo "  (OpenClaw already binds to localhost, firewall is secondary defense)"
+    info "Tip: enable macOS firewall in System Settings > Network > Firewall"
 fi
 
-# Linux: block port via ufw if available
 if [ "$PLATFORM" = "linux" ] && command -v ufw &> /dev/null; then
     sudo ufw deny "${GATEWAY_PORT}/tcp" 2>/dev/null && log "UFW: blocked port ${GATEWAY_PORT}" || true
 fi
 
 # =============================================================================
-# 5. Workspace structure
+# 6. Workspace
 # =============================================================================
 step "Creating workspace"
 
 WORKSPACE="$CONFIG_DIR/workspace"
 mkdir -p "$WORKSPACE"/{memory,knowledge,learnings,archive,reports,skills}
 
-# -- AGENTS.md ----------------------------------------------------------------
 if [ ! -f "$WORKSPACE/AGENTS.md" ]; then
     cat > "$WORKSPACE/AGENTS.md" << 'EOF'
 # AGENTS.md
 
 ## Boot Sequence
 1. Read SOUL.md (if exists)
-2. Read USER.md (if exists)  
+2. Read USER.md (if exists)
 3. Read memory/YYYY-MM-DD.md (today's log)
 
 ## Permissions
@@ -246,7 +230,6 @@ EOF
     log "Created AGENTS.md"
 fi
 
-# -- MEMORY.md ----------------------------------------------------------------
 if [ ! -f "$WORKSPACE/MEMORY.md" ]; then
     cat > "$WORKSPACE/MEMORY.md" << 'EOF'
 # MEMORY.md
@@ -256,7 +239,6 @@ EOF
     log "Created MEMORY.md"
 fi
 
-# -- LEARNINGS.md -------------------------------------------------------------
 if [ ! -f "$WORKSPACE/learnings/LEARNINGS.md" ]; then
     cat > "$WORKSPACE/learnings/LEARNINGS.md" << 'EOF'
 # LEARNINGS.md
@@ -266,30 +248,27 @@ EOF
     log "Created learnings/LEARNINGS.md"
 fi
 
-# -- TOOLS.md -----------------------------------------------------------------
 if [ ! -f "$WORKSPACE/TOOLS.md" ]; then
     cat > "$WORKSPACE/TOOLS.md" << 'EOF'
 # TOOLS.md
 
 *Environment-specific notes: device names, SSH hosts, API endpoints, etc.*
-*Skills are shared. Your setup is yours.*
 EOF
     log "Created TOOLS.md"
 fi
 
 # =============================================================================
-# 6. Gateway service
+# 7. Gateway service
 # =============================================================================
 step "Starting gateway"
 
-openclaw gateway install 2>/dev/null || warn "Gateway service install skipped (may need manual setup)"
+openclaw gateway install 2>/dev/null || warn "Gateway service install -- may need manual setup"
 openclaw gateway start 2>/dev/null || warn "Gateway may still be starting..."
 
-# Give it a moment
 sleep 3
 
 # =============================================================================
-# 7. Verify
+# 8. Verify
 # =============================================================================
 step "Verification"
 
@@ -297,18 +276,17 @@ openclaw status 2>/dev/null || warn "Status check failed. Gateway may still be i
 
 echo ""
 echo -e "${GREEN}============================================================${NC}"
-echo -e "${GREEN}  OpenClaw is ready.${NC}"
+echo -e "${GREEN}  OpenClaw is ready!${NC}"
 echo -e "${GREEN}============================================================${NC}"
 echo ""
 echo "  Dashboard:   http://127.0.0.1:${GATEWAY_PORT}/"
 echo "  Config:      ${CONFIG_FILE}"
 echo "  Workspace:   ${WORKSPACE}"
 echo ""
-echo "  Quick commands:"
+echo "  Commands:"
 echo "    openclaw status              # health check"
 echo "    openclaw security audit      # security scan"
 echo "    openclaw gateway restart     # restart gateway"
-echo "    openclaw channel telegram setup  # connect Telegram"
 echo ""
 echo "  Docs: https://docs.openclaw.ai"
 echo ""
