@@ -26,22 +26,7 @@ step()  { echo -e "\n${BOLD}${BLUE}--- $1 ---${NC}\n"; }
 
 GATEWAY_PORT=18789
 GATEWAY_BIND="loopback"
-TEMPLATE=""
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --template)
-            TEMPLATE="$2"
-            shift 2
-            ;;
-        *)
-            warn "Unknown option: $1"
-            shift
-            ;;
-    esac
-done
+REPO_RAW="https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main"
 
 # =============================================================================
 # 1. OS + Xcode
@@ -75,7 +60,7 @@ if [ "$PLATFORM" = "macos" ]; then
 fi
 
 # =============================================================================
-# 2. Node.js (no nvm -- direct install)
+# 2. Node.js
 # =============================================================================
 step "Checking Node.js"
 
@@ -97,12 +82,9 @@ if [ "$NEED_NODE" = true ]; then
     step "Installing Node.js"
     
     if [ "$PLATFORM" = "macos" ]; then
-        # Use Homebrew if available, otherwise install it
         if ! command -v brew &> /dev/null; then
             info "Installing Homebrew..."
             /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-            
-            # Add brew to PATH for Apple Silicon and Intel
             if [ -f "/opt/homebrew/bin/brew" ]; then
                 eval "$(/opt/homebrew/bin/brew shellenv)"
                 echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
@@ -220,106 +202,26 @@ fi
 # =============================================================================
 # 6. Workspace
 # =============================================================================
-step "Creating workspace"
+step "Setting up workspace"
 
 WORKSPACE="$CONFIG_DIR/workspace"
 mkdir -p "$WORKSPACE"/{memory,knowledge,learnings,archive,reports,skills}
 
-if [ -n "$TEMPLATE" ]; then
-    # Look for template in repo directory or downloaded alongside script
-    TEMPLATE_DIR=""
-    
-    if [ -d "$SCRIPT_DIR/templates/$TEMPLATE" ]; then
-        TEMPLATE_DIR="$SCRIPT_DIR/templates/$TEMPLATE"
-    elif [ -d "./templates/$TEMPLATE" ]; then
-        TEMPLATE_DIR="./templates/$TEMPLATE"
-    fi
-    
-    REPO_RAW="https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main"
-    
-    if [ -d "$SCRIPT_DIR/templates/$TEMPLATE" ]; then
-        # Local clone -- copy files directly
-        TEMPLATE_DIR="$SCRIPT_DIR/templates/$TEMPLATE"
-        info "Applying template: $TEMPLATE (local)"
-        find "$TEMPLATE_DIR" -type f | while read -r src; do
-            rel="${src#$TEMPLATE_DIR/}"
-            dest="$WORKSPACE/$rel"
-            mkdir -p "$(dirname "$dest")"
-            if [ ! -f "$dest" ]; then
-                cp "$src" "$dest"
-                log "Created $rel"
-            else
-                info "Skipped $rel (already exists)"
-            fi
-        done
+# Download production-tested agent config files
+CONFIG_FILES="AGENTS.md HEARTBEAT.md MEMORY.md TOOLS.md learnings/LEARNINGS.md"
+for file in $CONFIG_FILES; do
+    dest="$WORKSPACE/$file"
+    mkdir -p "$(dirname "$dest")"
+    if [ ! -f "$dest" ]; then
+        if curl -sfL "$REPO_RAW/templates/rai_asaral/$file" -o "$dest" 2>/dev/null; then
+            log "Created $file"
+        else
+            warn "Failed to download $file"
+        fi
     else
-        # No local repo -- download template files from GitHub
-        info "Applying template: $TEMPLATE (downloading)"
-        TEMPLATE_FILES="AGENTS.md HEARTBEAT.md MEMORY.md TOOLS.md learnings/LEARNINGS.md"
-        for file in $TEMPLATE_FILES; do
-            dest="$WORKSPACE/$file"
-            mkdir -p "$(dirname "$dest")"
-            if [ ! -f "$dest" ]; then
-                if curl -sfL "$REPO_RAW/templates/$TEMPLATE/$file" -o "$dest" 2>/dev/null; then
-                    log "Created $file"
-                else
-                    warn "Failed to download $file"
-                fi
-            else
-                info "Skipped $file (already exists)"
-            fi
-        done
+        info "Skipped $file (already exists)"
     fi
-fi
-
-# Fallback: create minimal files if no template or template didn't cover them
-if [ ! -f "$WORKSPACE/AGENTS.md" ]; then
-    cat > "$WORKSPACE/AGENTS.md" << 'EOF'
-# AGENTS.md
-
-## Boot Sequence
-1. Read SOUL.md (if exists)
-2. Read USER.md (if exists)
-3. Read memory/YYYY-MM-DD.md (today's log)
-
-## Permissions
-**Do freely:** Read files, web search, write to memory/, analysis
-**Ask first:** Sending messages, installing software, destructive commands, system changes
-
-## Write Discipline
-- After significant tasks: log to memory/YYYY-MM-DD.md
-- After mistakes: append rule to learnings/LEARNINGS.md
-- Before session end: write handover to memory/YYYY-MM-DD.md
-EOF
-    log "Created AGENTS.md (default)"
-fi
-
-if [ ! -f "$WORKSPACE/MEMORY.md" ]; then
-    cat > "$WORKSPACE/MEMORY.md" << 'EOF'
-# MEMORY.md
-
-*Long-term curated memory. Updated during periodic reviews, not mid-task.*
-EOF
-    log "Created MEMORY.md (default)"
-fi
-
-if [ ! -f "$WORKSPACE/learnings/LEARNINGS.md" ]; then
-    cat > "$WORKSPACE/learnings/LEARNINGS.md" << 'EOF'
-# LEARNINGS.md
-
-*Every mistake becomes a one-line rule. These compound over time.*
-EOF
-    log "Created learnings/LEARNINGS.md (default)"
-fi
-
-if [ ! -f "$WORKSPACE/TOOLS.md" ]; then
-    cat > "$WORKSPACE/TOOLS.md" << 'EOF'
-# TOOLS.md
-
-*Environment-specific notes: device names, SSH hosts, API endpoints, etc.*
-EOF
-    log "Created TOOLS.md (default)"
-fi
+done
 
 # =============================================================================
 # 7. Gateway service

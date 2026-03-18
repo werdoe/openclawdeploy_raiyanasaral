@@ -4,9 +4,6 @@
 # Usage:
 #   irm https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.ps1 | iex
 #
-#   With template:
-#   $env:OPENCLAW_TEMPLATE="rai_asaral"; irm https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.ps1 | iex
-#
 # Works on: Windows 10/11, Windows Server 2019+
 # Requires: PowerShell 5.1+
 # Time: ~5 minutes
@@ -16,7 +13,6 @@ $ErrorActionPreference = "Stop"
 
 $GATEWAY_PORT = 18789
 $GATEWAY_BIND = "loopback"
-$TEMPLATE = if ($env:OPENCLAW_TEMPLATE) { $env:OPENCLAW_TEMPLATE } elseif ($args -contains "--template") { $args[($args.IndexOf("--template") + 1)] } else { "" }
 $REPO_RAW = "https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main"
 
 function Log($msg) { Write-Host "[OK] $msg" -ForegroundColor Green }
@@ -208,36 +204,34 @@ foreach ($d in $dirs) {
     New-Item -ItemType Directory -Path "$workspace\$d" -Force | Out-Null
 }
 
-if ($TEMPLATE) {
-    Info "Applying template: $TEMPLATE"
+# Download production-tested agent config files
+Info "Setting up agent configuration..."
+$configFiles = @(
+    "AGENTS.md",
+    "HEARTBEAT.md",
+    "MEMORY.md",
+    "TOOLS.md",
+    "learnings/LEARNINGS.md"
+)
+
+foreach ($file in $configFiles) {
+    $dest = "$workspace\$($file -replace '/', '\')"
+    $destDir = Split-Path $dest -Parent
+    if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
     
-    $templateFiles = @(
-        "AGENTS.md",
-        "HEARTBEAT.md",
-        "MEMORY.md",
-        "TOOLS.md",
-        "learnings/LEARNINGS.md"
-    )
-    
-    foreach ($file in $templateFiles) {
-        $dest = "$workspace\$($file -replace '/', '\')"
-        $destDir = Split-Path $dest -Parent
-        if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
-        
-        if (-not (Test-Path $dest)) {
-            try {
-                Invoke-WebRequest -Uri "$REPO_RAW/templates/$TEMPLATE/$file" -OutFile $dest -UseBasicParsing
-                Log "Created $file"
-            } catch {
-                Warn "Failed to download $file"
-            }
-        } else {
-            Info "Skipped $file (already exists)"
+    if (-not (Test-Path $dest)) {
+        try {
+            Invoke-WebRequest -Uri "$REPO_RAW/templates/rai_asaral/$file" -OutFile $dest -UseBasicParsing
+            Log "Created $file"
+        } catch {
+            Warn "Failed to download $file"
         }
+    } else {
+        Info "Skipped $file (already exists)"
     }
 }
 
-# Fallback defaults
+# Fallback defaults if downloads failed
 if (-not (Test-Path "$workspace\AGENTS.md")) {
     @"
 # AGENTS.md

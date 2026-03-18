@@ -32,22 +32,10 @@ This script installs OpenClaw and applies these patterns automatically.
 
 ### macOS / Linux:
 ```bash
-curl -sLO https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.sh && bash deploy.sh --template rai_asaral
-```
-
-### Windows (PowerShell):
-```powershell
-$env:OPENCLAW_TEMPLATE="rai_asaral"; irm https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.ps1 | iex
-```
-
-### Without template (bare install):
-
-macOS / Linux:
-```bash
 curl -sLO https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.sh && bash deploy.sh
 ```
 
-Windows:
+### Windows (PowerShell):
 ```powershell
 irm https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.ps1 | iex
 ```
@@ -65,7 +53,7 @@ irm https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/de
 3. Installs OpenClaw globally via npm
 4. Runs the onboarding wizard (API key, model, channel)
 5. Hardens security (loopback binding, token auth, tailscale off)
-6. Downloads and applies template files (if `--template` specified)
+6. Sets up workspace with production-tested agent config files
 7. Registers and starts the gateway service
 8. Runs verification
 
@@ -79,40 +67,6 @@ irm https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/de
 
 This is a **blank slate** with a strong foundation. You get the architecture and patterns. Everything else you build yourself.
 
-## Templates
-
-Templates provide pre-configured workspace files that took weeks of iteration to refine.
-
-| Template | What's Included |
-|----------|----------------|
-| `rai_asaral` | Agent architecture: AGENTS.md, HEARTBEAT.md, MEMORY.md, TOOLS.md, LEARNINGS.md |
-
-**Without template:** minimal workspace with basic AGENTS.md and MEMORY.md.
-
-### Template Details: `rai_asaral`
-
-**AGENTS.md** -- The brain:
-- Boot sequence (what to read on startup, in what order)
-- Permission model (what to do freely vs what to ask about)
-- Write discipline (when and where to log)
-- Quality gates (must have clear problem, plan, and acceptance criteria before starting any task)
-- WIP limits (max 3 concurrent tasks)
-- Working memory (track failed approaches, completed steps, environment conflicts)
-- Request classification (immediate/quick/task -- never leave the user waiting in silence)
-- Self-monitoring (escalate after 3 blocks, update on long tasks)
-- Teaching mode (go deep on explanations, not summaries)
-- Cost awareness (Sonnet for daily use, Opus when needed)
-
-**HEARTBEAT.md** -- The rhythm:
-- Morning brief (weather, news, reminders -- once daily)
-- Nightly reflection (what went well, what went wrong, lessons, action items)
-- System health check (update monitoring, security alerts)
-- Quiet hours (01:00-09:00 unless urgent)
-
-**Not included (personal to each user):**
-- SOUL.md -- define your own agent's personality
-- IDENTITY.md -- name your agent, give it traits
-- USER.md -- your personal profile and preferences
 
 ## After Install
 
@@ -123,13 +77,6 @@ openclaw gateway restart     # restart gateway
 open http://127.0.0.1:18789/ # open dashboard
 ```
 
-## Adding Custom Skills Later
-
-```bash
-cp -r /path/to/my-skill ~/.openclaw/workspace/skills/
-cd ~/.openclaw/workspace/skills/my-skill
-npm install
-```
 
 ## Security
 
