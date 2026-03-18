@@ -54,6 +54,25 @@ case "$OS" in
     *)      error "Unsupported OS: $OS. This script supports macOS and Linux." ;;
 esac
 
+# macOS: ensure Xcode Command Line Tools are installed (git, curl, etc.)
+if [ "$PLATFORM" = "macos" ]; then
+    if ! xcode-select -p &> /dev/null; then
+        info "Installing Xcode Command Line Tools (required for git, curl, etc.)..."
+        xcode-select --install
+        echo ""
+        echo "  Waiting for Xcode CLI tools to finish installing..."
+        echo "  If a dialog appeared, click Install and wait."
+        echo ""
+        # Wait for installation to complete
+        until xcode-select -p &> /dev/null; do
+            sleep 5
+        done
+        log "Xcode Command Line Tools installed"
+    else
+        log "Xcode Command Line Tools found"
+    fi
+fi
+
 if [ "$(id -u)" -eq 0 ]; then
     error "Don't run as root. Use your normal user account."
 fi
