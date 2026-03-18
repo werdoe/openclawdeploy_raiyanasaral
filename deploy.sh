@@ -235,15 +235,16 @@ if [ -n "$TEMPLATE" ]; then
         TEMPLATE_DIR="./templates/$TEMPLATE"
     fi
     
-    if [ -n "$TEMPLATE_DIR" ]; then
-        info "Applying template: $TEMPLATE"
-        
-        # Copy all template files into workspace (don't overwrite existing)
+    REPO_RAW="https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main"
+    
+    if [ -d "$SCRIPT_DIR/templates/$TEMPLATE" ]; then
+        # Local clone -- copy files directly
+        TEMPLATE_DIR="$SCRIPT_DIR/templates/$TEMPLATE"
+        info "Applying template: $TEMPLATE (local)"
         find "$TEMPLATE_DIR" -type f | while read -r src; do
             rel="${src#$TEMPLATE_DIR/}"
             dest="$WORKSPACE/$rel"
-            dest_dir="$(dirname "$dest")"
-            mkdir -p "$dest_dir"
+            mkdir -p "$(dirname "$dest")"
             if [ ! -f "$dest" ]; then
                 cp "$src" "$dest"
                 log "Created $rel"
@@ -252,9 +253,22 @@ if [ -n "$TEMPLATE" ]; then
             fi
         done
     else
-        warn "Template '$TEMPLATE' not found. Falling back to defaults."
-        warn "To use templates, clone the repo: git clone https://github.com/werdoe/openclawdeploy_raiyanasaral.git"
-        TEMPLATE=""
+        # No local repo -- download template files from GitHub
+        info "Applying template: $TEMPLATE (downloading)"
+        TEMPLATE_FILES="AGENTS.md SOUL.md HEARTBEAT.md IDENTITY.md MEMORY.md TOOLS.md learnings/LEARNINGS.md"
+        for file in $TEMPLATE_FILES; do
+            dest="$WORKSPACE/$file"
+            mkdir -p "$(dirname "$dest")"
+            if [ ! -f "$dest" ]; then
+                if curl -sfL "$REPO_RAW/templates/$TEMPLATE/$file" -o "$dest" 2>/dev/null; then
+                    log "Created $file"
+                else
+                    warn "Failed to download $file"
+                fi
+            else
+                info "Skipped $file (already exists)"
+            fi
+        done
     fi
 fi
 
