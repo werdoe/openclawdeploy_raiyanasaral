@@ -255,7 +255,7 @@ if [ -n "$TEMPLATE" ]; then
     else
         # No local repo -- download template files from GitHub
         info "Applying template: $TEMPLATE (downloading)"
-        TEMPLATE_FILES="AGENTS.md SOUL.md HEARTBEAT.md IDENTITY.md MEMORY.md TOOLS.md learnings/LEARNINGS.md"
+        TEMPLATE_FILES="AGENTS.md HEARTBEAT.md MEMORY.md TOOLS.md learnings/LEARNINGS.md"
         for file in $TEMPLATE_FILES; do
             dest="$WORKSPACE/$file"
             mkdir -p "$(dirname "$dest")"

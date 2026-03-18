@@ -10,7 +10,7 @@ The default OpenClaw install gives you a working agent with a blank workspace. T
 - **Task management** -- quality gates before starting work, WIP limits, working memory for complex tasks
 - **Heartbeat system** -- morning briefs, nightly reflection loops, system health monitoring
 - **Security hardening** -- loopback-only binding, token auth, firewall rules, tailscale disabled by default
-- **Personality framework** -- two-mode behavior (focused work vs casual), no-sugarcoat communication style
+- **Personality framework** -- template for defining your agent's behavior and communication style
 - **Write discipline** -- if it matters, it goes to disk. Handovers between sessions so nothing gets lost
 
 This script installs OpenClaw and applies these patterns automatically.
@@ -23,7 +23,7 @@ This script installs OpenClaw and applies these patterns automatically.
 | **AGENTS.md** | None | Boot sequence, permissions model, quality gates, WIP limits, task classification, teaching mode, cost awareness |
 | **Memory** | None | Daily logging system, long-term curation workflow, mistake-tracking rules |
 | **Heartbeat** | Basic | Morning briefs, nightly reflection with pattern analysis, system health checks |
-| **Personality** | Generic | Two-mode (focused/warm), direct communication, no filler |
+| **Personality** | Generic | Framework ready -- define your own via SOUL.md |
 | **Security** | Varies by wizard | Enforced loopback binding, random token auth, tailscale off, firewall hints |
 | **Task Handling** | Ad hoc | Quality gates (problem/plan/criteria before starting), WIP limits (max 3 concurrent), working memory for resumed tasks |
 | **Self-Monitoring** | None | Blocked-3-times escalation, progress updates on long tasks, logging what worked AND what didn't |
@@ -85,7 +85,7 @@ Templates provide pre-configured workspace files that took weeks of iteration to
 
 | Template | What's Included |
 |----------|----------------|
-| `rai_asaral` | Full agent config: AGENTS.md, SOUL.md, HEARTBEAT.md, IDENTITY.md, MEMORY.md, TOOLS.md, LEARNINGS.md |
+| `rai_asaral` | Agent architecture: AGENTS.md, HEARTBEAT.md, MEMORY.md, TOOLS.md, LEARNINGS.md |
 
 **Without template:** minimal workspace with basic AGENTS.md and MEMORY.md.
 
@@ -109,12 +109,10 @@ Templates provide pre-configured workspace files that took weeks of iteration to
 - System health check (update monitoring, security alerts)
 - Quiet hours (01:00-09:00 unless urgent)
 
-**SOUL.md** -- The personality:
-- Two modes: direct/efficient for work, warm/playful when there's room
-- No performed helpfulness ("I'd be happy to help!")
-- No sugarcoating
-- Truth-telling even when uncomfortable
-- Reads the room, switches naturally
+**Not included (personal to each user):**
+- SOUL.md -- define your own agent's personality
+- IDENTITY.md -- name your agent, give it traits
+- USER.md -- your personal profile and preferences
 
 ## After Install
 

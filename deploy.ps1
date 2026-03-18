@@ -213,9 +213,7 @@ if ($TEMPLATE) {
     
     $templateFiles = @(
         "AGENTS.md",
-        "SOUL.md",
         "HEARTBEAT.md",
-        "IDENTITY.md",
         "MEMORY.md",
         "TOOLS.md",
         "learnings/LEARNINGS.md"
