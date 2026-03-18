@@ -30,21 +30,31 @@ This script installs OpenClaw and applies these patterns automatically.
 
 ## Quick Start
 
-One command:
-
+### macOS / Linux:
 ```bash
 curl -sLO https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.sh && bash deploy.sh --template rai_asaral
 ```
 
-Without the template (bare install, minimal workspace):
+### Windows (PowerShell):
+```powershell
+$env:OPENCLAW_TEMPLATE="rai_asaral"; irm https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.ps1 | iex
+```
 
+### Without template (bare install):
+
+macOS / Linux:
 ```bash
 curl -sLO https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.sh && bash deploy.sh
 ```
 
+Windows:
+```powershell
+irm https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.ps1 | iex
+```
+
 ## What You'll Need
 
-- **macOS or Linux** (Ubuntu/Debian/WSL)
+- **macOS, Linux, or Windows 10/11**
 - **Anthropic API key** ([get one here](https://console.anthropic.com/settings/keys))
 - ~5 minutes
 
