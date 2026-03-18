@@ -1,20 +1,45 @@
 # OpenClaw Deploy
 
-One-command setup for a production-ready [OpenClaw](https://docs.openclaw.ai) instance.
+Production-ready OpenClaw setup in one command. Installs, configures, and hardens a fresh instance with battle-tested agent architecture.
+
+## Why This Exists
+
+The default OpenClaw install gives you a working agent with a blank workspace. That's fine for experimenting, but for real daily use you need more:
+
+- **Memory architecture** -- daily logs, long-term memory curation, learning from mistakes
+- **Task management** -- quality gates before starting work, WIP limits, working memory for complex tasks
+- **Heartbeat system** -- morning briefs, nightly reflection loops, system health monitoring
+- **Security hardening** -- loopback-only binding, token auth, firewall rules, tailscale disabled by default
+- **Personality framework** -- two-mode behavior (focused work vs casual), no-sugarcoat communication style
+- **Write discipline** -- if it matters, it goes to disk. Handovers between sessions so nothing gets lost
+
+This script installs OpenClaw and applies these patterns automatically.
+
+## What's Improved Over Default
+
+| Area | Default Install | This Deploy |
+|------|----------------|-------------|
+| **Workspace** | Empty | Structured directories (memory/, knowledge/, learnings/, archive/, reports/) |
+| **AGENTS.md** | None | Boot sequence, permissions model, quality gates, WIP limits, task classification, teaching mode, cost awareness |
+| **Memory** | None | Daily logging system, long-term curation workflow, mistake-tracking rules |
+| **Heartbeat** | Basic | Morning briefs, nightly reflection with pattern analysis, system health checks |
+| **Personality** | Generic | Two-mode (focused/warm), direct communication, no filler |
+| **Security** | Varies by wizard | Enforced loopback binding, random token auth, tailscale off, firewall hints |
+| **Task Handling** | Ad hoc | Quality gates (problem/plan/criteria before starting), WIP limits (max 3 concurrent), working memory for resumed tasks |
+| **Self-Monitoring** | None | Blocked-3-times escalation, progress updates on long tasks, logging what worked AND what didn't |
 
 ## Quick Start
 
-### Bare install (minimal):
+One command:
+
 ```bash
-curl -sLO https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.sh && bash deploy.sh
+curl -sLO https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.sh && bash deploy.sh --template rai_asaral
 ```
 
-### With template (recommended):
+Without the template (bare install, minimal workspace):
+
 ```bash
-git clone https://github.com/werdoe/openclawdeploy_raiyanasaral.git
-cd openclawdeploy_raiyanasaral
-chmod +x deploy.sh
-./deploy.sh --template rai_asaral
+curl -sLO https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.sh && bash deploy.sh
 ```
 
 ## What You'll Need
@@ -29,26 +54,57 @@ chmod +x deploy.sh
 2. Installs Homebrew + Node.js if missing
 3. Installs OpenClaw globally via npm
 4. Runs the onboarding wizard (API key, model, channel)
-5. Hardens security (loopback binding, token auth)
-6. Creates workspace with template files (if specified)
+5. Hardens security (loopback binding, token auth, tailscale off)
+6. Downloads and applies template files (if `--template` specified)
 7. Registers and starts the gateway service
-8. Verifies everything works
+8. Runs verification
+
+## What It Does NOT Include
+
+- No API keys or credentials (you provide your own during setup)
+- No sessions or conversation history
+- No personal data (USER.md, bookmarks, etc.)
+- No custom skills (add them later as needed)
+- No cron jobs (configure per your needs)
+
+This is a **blank slate** with a strong foundation. You get the architecture and patterns. Everything else you build yourself.
 
 ## Templates
 
-Templates provide pre-configured workspace files (AGENTS.md, SOUL.md, HEARTBEAT.md, etc.) with production-tested patterns.
+Templates provide pre-configured workspace files that took weeks of iteration to refine.
 
-| Template | Description |
-|----------|-------------|
-| `rai_asaral` | Full agent config: boot sequence, quality gates, memory system, heartbeat, personality |
+| Template | What's Included |
+|----------|----------------|
+| `rai_asaral` | Full agent config: AGENTS.md, SOUL.md, HEARTBEAT.md, IDENTITY.md, MEMORY.md, TOOLS.md, LEARNINGS.md |
 
-**Without a template:** you get a minimal workspace with basic AGENTS.md and MEMORY.md.
+**Without template:** minimal workspace with basic AGENTS.md and MEMORY.md.
 
-**With `rai_asaral`:** you get battle-tested config including:
-- AGENTS.md with quality gates, WIP limits, task classification, teaching mode
-- HEARTBEAT.md with morning briefs, nightly reflection, system health checks
-- SOUL.md with two-mode personality (focused work / warm casual)
-- IDENTITY.md, MEMORY.md, TOOLS.md, LEARNINGS.md
+### Template Details: `rai_asaral`
+
+**AGENTS.md** -- The brain:
+- Boot sequence (what to read on startup, in what order)
+- Permission model (what to do freely vs what to ask about)
+- Write discipline (when and where to log)
+- Quality gates (must have clear problem, plan, and acceptance criteria before starting any task)
+- WIP limits (max 3 concurrent tasks)
+- Working memory (track failed approaches, completed steps, environment conflicts)
+- Request classification (immediate/quick/task -- never leave the user waiting in silence)
+- Self-monitoring (escalate after 3 blocks, update on long tasks)
+- Teaching mode (go deep on explanations, not summaries)
+- Cost awareness (Sonnet for daily use, Opus when needed)
+
+**HEARTBEAT.md** -- The rhythm:
+- Morning brief (weather, news, reminders -- once daily)
+- Nightly reflection (what went well, what went wrong, lessons, action items)
+- System health check (update monitoring, security alerts)
+- Quiet hours (01:00-09:00 unless urgent)
+
+**SOUL.md** -- The personality:
+- Two modes: direct/efficient for work, warm/playful when there's room
+- No performed helpfulness ("I'd be happy to help!")
+- No sugarcoating
+- Truth-telling even when uncomfortable
+- Reads the room, switches naturally
 
 ## After Install
 
@@ -56,10 +112,10 @@ Templates provide pre-configured workspace files (AGENTS.md, SOUL.md, HEARTBEAT.
 openclaw status              # health check
 openclaw security audit      # security scan
 openclaw gateway restart     # restart gateway
-open http://127.0.0.1:18789/ # dashboard
+open http://127.0.0.1:18789/ # open dashboard
 ```
 
-## Adding Custom Skills
+## Adding Custom Skills Later
 
 ```bash
 cp -r /path/to/my-skill ~/.openclaw/workspace/skills/
@@ -69,10 +125,11 @@ npm install
 
 ## Security
 
-The script configures:
-- **Loopback binding** -- gateway only accessible from localhost
-- **Token auth** -- random 48-char token generated on setup
+The script enforces:
+- **Loopback binding** -- gateway only accessible from localhost (127.0.0.1)
+- **Token auth** -- random 48-character token generated per install
 - **Tailscale off** -- no external network exposure by default
+- **Firewall** -- Linux UFW rule added automatically; macOS reminder displayed
 
 ## License
 
