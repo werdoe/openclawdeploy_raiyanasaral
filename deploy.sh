@@ -26,6 +26,22 @@ step()  { echo -e "\n${BOLD}${BLUE}--- $1 ---${NC}\n"; }
 
 GATEWAY_PORT=18789
 GATEWAY_BIND="loopback"
+TEMPLATE=""
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --template)
+            TEMPLATE="$2"
+            shift 2
+            ;;
+        *)
+            warn "Unknown option: $1"
+            shift
+            ;;
+    esac
+done
 
 # =============================================================================
 # 1. OS + Xcode
@@ -209,6 +225,40 @@ step "Creating workspace"
 WORKSPACE="$CONFIG_DIR/workspace"
 mkdir -p "$WORKSPACE"/{memory,knowledge,learnings,archive,reports,skills}
 
+if [ -n "$TEMPLATE" ]; then
+    # Look for template in repo directory or downloaded alongside script
+    TEMPLATE_DIR=""
+    
+    if [ -d "$SCRIPT_DIR/templates/$TEMPLATE" ]; then
+        TEMPLATE_DIR="$SCRIPT_DIR/templates/$TEMPLATE"
+    elif [ -d "./templates/$TEMPLATE" ]; then
+        TEMPLATE_DIR="./templates/$TEMPLATE"
+    fi
+    
+    if [ -n "$TEMPLATE_DIR" ]; then
+        info "Applying template: $TEMPLATE"
+        
+        # Copy all template files into workspace (don't overwrite existing)
+        find "$TEMPLATE_DIR" -type f | while read -r src; do
+            rel="${src#$TEMPLATE_DIR/}"
+            dest="$WORKSPACE/$rel"
+            dest_dir="$(dirname "$dest")"
+            mkdir -p "$dest_dir"
+            if [ ! -f "$dest" ]; then
+                cp "$src" "$dest"
+                log "Created $rel"
+            else
+                info "Skipped $rel (already exists)"
+            fi
+        done
+    else
+        warn "Template '$TEMPLATE' not found. Falling back to defaults."
+        warn "To use templates, clone the repo: git clone https://github.com/werdoe/openclawdeploy_raiyanasaral.git"
+        TEMPLATE=""
+    fi
+fi
+
+# Fallback: create minimal files if no template or template didn't cover them
 if [ ! -f "$WORKSPACE/AGENTS.md" ]; then
     cat > "$WORKSPACE/AGENTS.md" << 'EOF'
 # AGENTS.md
@@ -227,7 +277,7 @@ if [ ! -f "$WORKSPACE/AGENTS.md" ]; then
 - After mistakes: append rule to learnings/LEARNINGS.md
 - Before session end: write handover to memory/YYYY-MM-DD.md
 EOF
-    log "Created AGENTS.md"
+    log "Created AGENTS.md (default)"
 fi
 
 if [ ! -f "$WORKSPACE/MEMORY.md" ]; then
@@ -236,7 +286,7 @@ if [ ! -f "$WORKSPACE/MEMORY.md" ]; then
 
 *Long-term curated memory. Updated during periodic reviews, not mid-task.*
 EOF
-    log "Created MEMORY.md"
+    log "Created MEMORY.md (default)"
 fi
 
 if [ ! -f "$WORKSPACE/learnings/LEARNINGS.md" ]; then
@@ -245,7 +295,7 @@ if [ ! -f "$WORKSPACE/learnings/LEARNINGS.md" ]; then
 
 *Every mistake becomes a one-line rule. These compound over time.*
 EOF
-    log "Created learnings/LEARNINGS.md"
+    log "Created learnings/LEARNINGS.md (default)"
 fi
 
 if [ ! -f "$WORKSPACE/TOOLS.md" ]; then
@@ -254,7 +304,7 @@ if [ ! -f "$WORKSPACE/TOOLS.md" ]; then
 
 *Environment-specific notes: device names, SSH hosts, API endpoints, etc.*
 EOF
-    log "Created TOOLS.md"
+    log "Created TOOLS.md (default)"
 fi
 
 # =============================================================================

@@ -4,17 +4,17 @@ One-command setup for a production-ready [OpenClaw](https://docs.openclaw.ai) in
 
 ## Quick Start
 
+### Bare install (minimal):
 ```bash
 curl -sLO https://raw.githubusercontent.com/werdoe/openclawdeploy_raiyanasaral/main/deploy.sh && bash deploy.sh
 ```
 
-Or clone and run:
-
+### With template (recommended):
 ```bash
-git clone https://github.com/werdoe/openclaw-deploy.git
-cd openclaw-deploy
+git clone https://github.com/werdoe/openclawdeploy_raiyanasaral.git
+cd openclawdeploy_raiyanasaral
 chmod +x deploy.sh
-./deploy.sh
+./deploy.sh --template rai_asaral
 ```
 
 ## What You'll Need
@@ -25,44 +25,44 @@ chmod +x deploy.sh
 
 ## What It Does
 
-1. Installs Node.js 20+ if missing (via nvm)
-2. Installs OpenClaw globally via npm
-3. Runs the onboarding wizard (API key, model, channel)
-4. Hardens security (loopback-only binding, token auth)
-5. Creates workspace directory structure
-6. Registers and starts the gateway service
-7. Verifies everything works
+1. Installs Xcode CLI tools (macOS) if missing
+2. Installs Homebrew + Node.js if missing
+3. Installs OpenClaw globally via npm
+4. Runs the onboarding wizard (API key, model, channel)
+5. Hardens security (loopback binding, token auth)
+6. Creates workspace with template files (if specified)
+7. Registers and starts the gateway service
+8. Verifies everything works
 
-## What It Does NOT Do
+## Templates
 
-- Install custom skills (add them later as needed)
-- Configure Slack, Discord, or other channels beyond the wizard
-- Set up cron jobs or automations
-- Create personality files (SOUL.md, etc.)
+Templates provide pre-configured workspace files (AGENTS.md, SOUL.md, HEARTBEAT.md, etc.) with production-tested patterns.
+
+| Template | Description |
+|----------|-------------|
+| `rai_asaral` | Full agent config: boot sequence, quality gates, memory system, heartbeat, personality |
+
+**Without a template:** you get a minimal workspace with basic AGENTS.md and MEMORY.md.
+
+**With `rai_asaral`:** you get battle-tested config including:
+- AGENTS.md with quality gates, WIP limits, task classification, teaching mode
+- HEARTBEAT.md with morning briefs, nightly reflection, system health checks
+- SOUL.md with two-mode personality (focused work / warm casual)
+- IDENTITY.md, MEMORY.md, TOOLS.md, LEARNINGS.md
 
 ## After Install
 
 ```bash
-# Check status
-openclaw status
-
-# Run security audit
-openclaw security audit --deep
-
-# Connect Telegram
-openclaw channel telegram setup
-
-# Open dashboard
-open http://127.0.0.1:18789/
+openclaw status              # health check
+openclaw security audit      # security scan
+openclaw gateway restart     # restart gateway
+open http://127.0.0.1:18789/ # dashboard
 ```
 
-## Adding Custom Skills Later
+## Adding Custom Skills
 
 ```bash
-# Copy a skill folder into your workspace
 cp -r /path/to/my-skill ~/.openclaw/workspace/skills/
-
-# Install its dependencies
 cd ~/.openclaw/workspace/skills/my-skill
 npm install
 ```
@@ -73,16 +73,6 @@ The script configures:
 - **Loopback binding** -- gateway only accessible from localhost
 - **Token auth** -- random 48-char token generated on setup
 - **Tailscale off** -- no external network exposure by default
-
-On Linux with UFW, port 18789 is automatically blocked from external access.
-
-## Requirements
-
-| Dependency | Minimum | Installed automatically? |
-|-----------|---------|------------------------|
-| Node.js | v20+ | Yes (via nvm) |
-| npm | v10+ | Yes (with Node.js) |
-| OpenClaw | latest | Yes |
 
 ## License
 
